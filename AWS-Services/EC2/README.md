@@ -1,8 +1,8 @@
-# EC2 Management Script
+# **EC2 Management Script**
 
 This Bash script automates the management of Amazon EC2 instances, including launching instances in public and private subnets, creating snapshots, modifying volumes, and installing Java packages based on the operating system.
 
-## Table of Contents
+## **Table of Contents**
 
 - [Prerequisites](#prerequisites)
 - [Usage](#usage)
@@ -10,7 +10,7 @@ This Bash script automates the management of Amazon EC2 instances, including lau
 - [How to Connect to EC2 Instances](#how-to-connect-to-ec2-instances)
 - [License](#license)
 
-## Prerequisites
+## **Prerequisites**
 
 Before running this script, ensure you have the following:
 
@@ -19,7 +19,7 @@ Before running this script, ensure you have the following:
 - A valid EC2 key pair (`MyKeyPair`).
 - Valid subnet IDs for both public and private subnets.
 
-## Usage
+## **Usage**
 
 1. Clone this repository:
    ```bash
@@ -27,7 +27,7 @@ Before running this script, ensure you have the following:
    cd ec2-management-script
 
 
-Script Steps
+**Script Steps**
 
 Launch EC2 Instance in Public Subnet: Creates an EC2 instance in a public subnet and associates a public IP address.
 
