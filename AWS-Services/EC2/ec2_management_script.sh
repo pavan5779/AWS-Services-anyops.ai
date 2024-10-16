@@ -3,9 +3,9 @@
 # Environmental Variables
 IMAGE_ID="ami-05134c8ef96964280"
 INSTANCE_TYPE="t2.micro"
-KEY_NAME="MyKeyPair"
-SUBNET_ID_PUBLIC="subnet-abc123"
-SUBNET_ID_PRIVATE="subnet-def456"
+KEY_NAME="pavan.pem"
+SUBNET_ID_PUBLIC="subnet-xxxxxxxx"
+SUBNET_ID_PRIVATE="subnet-xxxxxxxx"
 REGION="us-west-2"
 
 # Step 1: Launch EC2 Instance in Public Subnet
