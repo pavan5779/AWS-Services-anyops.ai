@@ -4,17 +4,16 @@
 BUCKET_1="pavan-bucket-1"
 BUCKET_2="pavan-bucket-2"
 BUCKET_3="pavan-bucket-3"
-REGION="ap-south-1"
+REGION="us-west-2"
 EC2_INSTANCE_TYPE="t2.micro"
-AMI_ID="ami-0c55b159cbfafe1f0"  # Change to a valid AMI ID for your region
-KEY_NAME="my-key-pair"  # Ensure you have a valid key pair
-SUBNET_ID="subnet-xxxxxxxx"  # Replace with your private subnet ID
-SECURITY_GROUP_ID="sg-xxxxxxxx"  # Replace with your security group ID
+AMI_ID="ami-0c55b159cbfafe1f0" 
+SUBNET_ID="subnet-xxxxxxxx"  
+SECURITY_GROUP_ID="sg-xxxxxxxx" 
 
 # Step 1: Create S3 Buckets
 aws s3api create-bucket --bucket $BUCKET_1 --region $REGION --create-bucket-configuration LocationConstraint=$REGION
 aws s3api create-bucket --bucket $BUCKET_2 --region $REGION --create-bucket-configuration LocationConstraint=$REGION
-aws s3api create-bucket --bucket $BUCKET_3 --region us-east-1 --create-bucket-configuration LocationConstraint=us-east-1
+aws s3api create-bucket --bucket $BUCKET_3 --region $REGION --create-bucket-configuration LocationConstraint=$REGION
 
 echo "Buckets created: $BUCKET_1, $BUCKET_2, $BUCKET_3"
 
