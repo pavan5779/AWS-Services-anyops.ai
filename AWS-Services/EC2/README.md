@@ -29,26 +29,26 @@ Before running this script, ensure you have the following:
 
 **Script Steps**
 
-Launch EC2 Instance in Public Subnet: Creates an EC2 instance in a public subnet and associates a public IP address.
+1. Launch EC2 Instance in Public Subnet: Creates an EC2 instance in a public subnet and associates a public IP address.
 
-Launch EC2 Instance in Private Subnet: Creates an EC2 instance in a private subnet.
+2. Launch EC2 Instance in Private Subnet: Creates an EC2 instance in a private subnet.
 
-Stop EC2 Instances: Stops the created EC2 instances.
+3. Stop EC2 Instances: Stops the created EC2 instances.
 
-Create an EC2 Instance with 8 GB Storage: Launches a new instance with a specified EBS volume size.
+4. Create an EC2 Instance with 8 GB Storage: Launches a new instance with a specified EBS volume size.
 
-Create a Snapshot: Creates a snapshot of the EBS volume attached to the instance.
+5. Create a Snapshot: Creates a snapshot of the EBS volume attached to the instance.
 
-Extend Storage: Modifies the EBS volume to increase its size.
+6. Extend Storage: Modifies the EBS volume to increase its size.
 
-Delete the Snapshot: Deletes the snapshot created earlier.
+7. Delete the Snapshot: Deletes the snapshot created earlier.
 
-Connect to EC2 Instances: Instructions on connecting to the instances if the PEM key is lost.
+8. Connect to EC2 Instances: Instructions on connecting to the instances if the PEM key is lost.
 
-Create Instances in Different Availability Zones: Creates two instances in different subnets.
+9. Create Instances in Different Availability Zones: Creates two instances in different subnets.
 
-Stop and Detach EBS Volume: Stops one instance, detaches its EBS volume, and attaches it to another instance.
+10. Stop and Detach EBS Volume: Stops one instance, detaches its EBS volume, and attaches it to another instance.
 
-Retrieve Private IP Addresses: Fetches the private IP addresses of running instances and saves them to a file.
+11. Retrieve Private IP Addresses: Fetches the private IP addresses of running instances and saves them to a file.
 
-Install Java Packages: Creates a script to install Java based on the operating system of each instance.
+12. Install Java Packages: Creates a script to install Java based on the operating system of each instance.
