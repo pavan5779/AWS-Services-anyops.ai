@@ -30,8 +30,8 @@ This script automates the setup of monitoring for an EC2 instance using Amazon S
 
 **Additional Information**
 
-5. **Cost:** Using AWS services may incur charges. Please check the AWS pricing page for details.
+1. **Cost:** Using AWS services may incur charges. Please check the AWS pricing page for details.
 
-6. **Email Subscription Confirmation:** After running the script, you may need to confirm your email subscription through a confirmation link sent to your inbox.
+2. **Email Subscription Confirmation:** After running the script, you may need to confirm your email subscription through a confirmation link sent to your inbox.
 
-7. **CloudWatch Dashboard:** You can monitor your EC2 instance and CloudWatch alarms in the AWS Management Console under the CloudWatch section.
+3. **CloudWatch Dashboard:** You can monitor your EC2 instance and CloudWatch alarms in the AWS Management Console under the CloudWatch section.
