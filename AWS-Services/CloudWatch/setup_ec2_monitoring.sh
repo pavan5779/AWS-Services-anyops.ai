@@ -2,7 +2,7 @@
 
 # Environmental Variables
 TOPIC_NAME="EC2Monitoring"
-EMAIL="pavan@example.com"
+EMAIL="pavankalyanmeda5779@gmail.com"
 REGION="us-west-2"
 INSTANCE_ID="i-0ab5ee386515e9f3c"
 QUEUE_NAME="EC2MonitoringQueue"
