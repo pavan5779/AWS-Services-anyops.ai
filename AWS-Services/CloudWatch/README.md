@@ -20,18 +20,18 @@ This script automates the setup of monitoring for an EC2 instance using Amazon S
 
 **How It Works**
 
-**SNS Topic:** The script creates an SNS topic for monitoring notifications and subscribes the specified email address to it.
+1. **SNS Topic:** The script creates an SNS topic for monitoring notifications and subscribes the specified email address to it.
 
-**SQS Queue:** An SQS queue is created and subscribed to the SNS topic to receive notifications.
+2. **SQS Queue:** An SQS queue is created and subscribed to the SNS topic to receive notifications.
 
-**CloudWatch Alarm:** A CloudWatch alarm is configured to monitor the NetworkIn metric of the specified EC2 instance. If the traffic exceeds a defined threshold, a notification is sent to the SNS topic, which is then delivered to the SQS queue.
+3. **CloudWatch Alarm:** A CloudWatch alarm is configured to monitor the NetworkIn metric of the specified EC2 instance. If the traffic exceeds a defined threshold, a notification is sent to the SNS topic, which is then delivered to the SQS queue.
 
-**Message Verification:** The script checks for messages in the SQS queue to verify that notifications are being received.
+4. **Message Verification:** The script checks for messages in the SQS queue to verify that notifications are being received.
 
 **Additional Information**
 
-**Cost:** Using AWS services may incur charges. Please check the AWS pricing page for details.
+5. **Cost:** Using AWS services may incur charges. Please check the AWS pricing page for details.
 
-**Email Subscription Confirmation:** After running the script, you may need to confirm your email subscription through a confirmation link sent to your inbox.
+6. **Email Subscription Confirmation:** After running the script, you may need to confirm your email subscription through a confirmation link sent to your inbox.
 
-**CloudWatch Dashboard:** You can monitor your EC2 instance and CloudWatch alarms in the AWS Management Console under the CloudWatch section.
+7. **CloudWatch Dashboard:** You can monitor your EC2 instance and CloudWatch alarms in the AWS Management Console under the CloudWatch section.
