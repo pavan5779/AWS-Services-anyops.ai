@@ -14,6 +14,7 @@ This script automates the creation of an Amazon Virtual Private Cloud (VPC) alon
 **Prerequisites**
 
 AWS CLI installed and configured on your machine.
+
 IAM permissions to create VPCs, subnets, route tables, and gateways.
 
 
