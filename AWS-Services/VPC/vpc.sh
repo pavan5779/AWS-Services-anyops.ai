@@ -1,64 +1,66 @@
 #!/bin/bash
 
-# Environmental Variables
-VPC_CIDR="10.0.0.0/16"
-PUBLIC_CIDR_1="10.0.1.0/24"
-PUBLIC_CIDR_2="10.0.2.0/24"
-PUBLIC_CIDR_3="10.0.3.0/24"
-PRIVATE_CIDR_1="10.0.4.0/24"
-PRIVATE_CIDR_2="10.0.5.0/24"
-PRIVATE_CIDR_3="10.0.6.0/24"
-REGION="us-west-2"
+# AWS CLI Script to Automate VPC, Subnet, Route Table, IGW, NGW, and EC2 Instance Setup
 
-# Step 1: Create VPC
-VPC_ID=$(aws ec2 create-vpc --cidr-block $VPC_CIDR --query 'Vpc.VpcId' --output text --region $REGION)
-echo "VPC created with ID: $VPC_ID"
+# 1. Create a VPC
+echo "Creating VPC..."
+VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --query 'Vpc.VpcId' --output text)
+echo "VPC ID '$VPC_ID' created."
 
-# Step 2: Create Subnets (3 public, 3 private)
-PUBLIC_SUBNET_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PUBLIC_CIDR_1 --availability-zone ${REGION}a --query 'Subnet.SubnetId' --output text)
-PUBLIC_SUBNET_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PUBLIC_CIDR_2 --availability-zone ${REGION}b --query 'Subnet.SubnetId' --output text)
-PUBLIC_SUBNET_3=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PUBLIC_CIDR_3 --availability-zone ${REGION}c --query 'Subnet.SubnetId' --output text)
+# 2. Create 6 Subnets (3 Public, 3 Private)
+echo "Creating subnets..."
+PUBLIC_SUBNET_IDS=()
+PRIVATE_SUBNET_IDS=()
+for i in {1..3}; do
+    PUBLIC_SUBNET_IDS+=($(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.$i.0/24 --availability-zone ap-south-1a --query 'Subnet.SubnetId' --output text))
+    PRIVATE_SUBNET_IDS+=($(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.$((i+3)).0/24 --availability-zone ap-south-1a --query 'Subnet.SubnetId' --output text))
+done
+echo "Public subnets created: ${PUBLIC_SUBNET_IDS[@]}"
+echo "Private subnets created: ${PRIVATE_SUBNET_IDS[@]}"
 
-PRIVATE_SUBNET_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_CIDR_1 --availability-zone ${REGION}a --query 'Subnet.SubnetId' --output text)
-PRIVATE_SUBNET_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_CIDR_2 --availability-zone ${REGION}b --query 'Subnet.SubnetId' --output text)
-PRIVATE_SUBNET_3=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_CIDR_3 --availability-zone ${REGION}c --query 'Subnet.SubnetId' --output text)
+# 3. Create Public and Private Route Tables
+echo "Creating route tables..."
+PUBLIC_RT_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --query 'RouteTable.RouteTableId' --output text)
+PRIVATE_RT_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --query 'RouteTable.RouteTableId' --output text)
+echo "Public Route Table ID: $PUBLIC_RT_ID"
+echo "Private Route Table ID: $PRIVATE_RT_ID"
 
-echo "Public subnets created: $PUBLIC_SUBNET_1, $PUBLIC_SUBNET_2, $PUBLIC_SUBNET_3"
-echo "Private subnets created: $PRIVATE_SUBNET_1, $PRIVATE_SUBNET_2, $PRIVATE_SUBNET_3"
+# 4. Create Internet Gateway (IGW)
+echo "Creating Internet Gateway..."
+IGW_ID=$(aws ec2 create-internet-gateway --query 'InternetGateway.InternetGatewayId' --output text)
+echo "Internet Gateway ID '$IGW_ID' created."
 
-# Step 3: Create Route Tables
-PUBLIC_ROUTE_TABLE=$(aws ec2 create-route-table --vpc-id $VPC_ID --query 'RouteTable.RouteTableId' --output text --region $REGION)
-PRIVATE_ROUTE_TABLE=$(aws ec2 create-route-table --vpc-id $VPC_ID --query 'RouteTable.RouteTableId' --output text --region $REGION)
-echo "Public Route Table: $PUBLIC_ROUTE_TABLE, Private Route Table: $PRIVATE_ROUTE_TABLE"
+# 5. Attach IGW to VPC
+echo "Attaching Internet Gateway to VPC..."
+aws ec2 attach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID
 
-# Step 4: Create IGW and Attach to VPC
-IGW=$(aws ec2 create-internet-gateway --query 'InternetGateway.InternetGatewayId' --output text --region $REGION)
-aws ec2 attach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $IGW --region $REGION
-echo "Internet Gateway: $IGW attached to VPC"
+# 6. Add Route to Public Route Table (to send traffic via IGW)
+echo "Adding route to Public Route Table..."
+aws ec2 create-route --route-table-id $PUBLIC_RT_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_ID
 
-# Step 5: Add Routes
-aws ec2 create-route --route-table-id $PUBLIC_ROUTE_TABLE --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW --region $REGION
-echo "Route added to public route table via IGW"
+# 7. Associate all 3 Public Subnets to Public Route Table
+echo "Associating public subnets with Public Route Table..."
+for SUBNET_ID in ${PUBLIC_SUBNET_IDS[@]}; do
+    aws ec2 associate-route-table --route-table-id $PUBLIC_RT_ID --subnet-id $SUBNET_ID
+done
 
-# Step 6: Associate Subnets with Route Tables
-aws ec2 associate-route-table --subnet-id $PUBLIC_SUBNET_1 --route-table-id $PUBLIC_ROUTE_TABLE --region $REGION
-aws ec2 associate-route-table --subnet-id $PUBLIC_SUBNET_2 --route-table-id $PUBLIC_ROUTE_TABLE --region $REGION
-aws ec2 associate-route-table --subnet-id $PUBLIC_SUBNET_3 --route-table-id $PUBLIC_ROUTE_TABLE --region $REGION
+# 8. Create NAT Gateway (NGW) along with Elastic IP
+echo "Creating NAT Gateway and Elastic IP..."
+EIP_ALLOC_ID=$(aws ec2 allocate-address --query 'AllocationId' --output text)
+NGW_ID=$(aws ec2 create-nat-gateway --subnet-id ${PUBLIC_SUBNET_IDS[0]} --allocation-id $EIP_ALLOC_ID --query 'NatGateway.NatGatewayId' --output text)
+echo "NAT Gateway ID '$NGW_ID' created."
 
-echo "All public subnets associated with the public route table"
+# Wait for NAT Gateway to become available
+echo "Waiting for NAT Gateway to become available..."
+aws ec2 wait nat-gateway-available --nat-gateway-ids $NGW_ID
+echo "NAT Gateway is now available."
 
-# Step 7: Create NAT Gateway
-EIP=$(aws ec2 allocate-address --query 'AllocationId' --output text --region $REGION)
-NAT_GW=$(aws ec2 create-nat-gateway --subnet-id $PUBLIC_SUBNET_1 --allocation-id $EIP --query 'NatGateway.NatGatewayId' --output text --region $REGION)
-echo "NAT Gateway created with Elastic IP: $EIP and NAT GW: $NAT_GW"
+# 9. Add Route to Private Route Table (to send traffic via NGW)
+echo "Adding route to Private Route Table..."
+aws ec2 create-route --route-table-id $PRIVATE_RT_ID --destination-cidr-block 0.0.0.0/0 --nat-gateway-id $NGW_ID
 
-# Step 8: Add Route to Private Route Table via NAT Gateway
-aws ec2 create-route --route-table-id $PRIVATE_ROUTE_TABLE --destination-cidr-block 0.0.0.0/0 --nat-gateway-id $NAT_GW --region $REGION
-echo "Route to Private Route Table via NAT Gateway added"
-
-# Step 9: Associate Private Subnets to Private Route Table
-aws ec2 associate-route-table --subnet-id $PRIVATE_SUBNET_1 --route-table-id $PRIVATE_ROUTE_TABLE --region $REGION
-aws ec2 associate-route-table --subnet-id $PRIVATE_SUBNET_2 --route-table-id $PRIVATE_ROUTE_TABLE --region $REGION
-aws ec2 associate-route-table --subnet-id $PRIVATE_SUBNET_3 --route-table-id $PRIVATE_ROUTE_TABLE --region $REGION
-
-echo "All private subnets associated with the private route table"
+# 10. Associate all 3 Private Subnets to Private Route Table
+echo "Associating private subnets with Private Route Table..."
+for SUBNET_ID in ${PRIVATE_SUBNET_IDS[@]}; do
+    aws ec2 associate-route-table --route-table-id $PRIVATE_RT_ID --subnet-id $SUBNET_ID
+done
