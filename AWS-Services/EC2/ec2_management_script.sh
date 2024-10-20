@@ -1,87 +1,75 @@
 #!/bin/bash
 
-# Environmental Variables
-IMAGE_ID="ami-05134c8ef96964280"
-INSTANCE_TYPE="t2.micro"
-KEY_NAME="pavan.pem"
-SUBNET_ID_PUBLIC="subnet-xxxxxxxx"
-SUBNET_ID_PRIVATE="subnet-xxxxxxxx"
-REGION="us-west-2"
+# 11. Launch an EC2 Instance in Public Subnet
+echo "Launching EC2 instance in public subnet..."
+PUBLIC_INSTANCE_ID=$(aws ec2 run-instances --image-id ami-05134c8ef96964280 --instance-type t2.micro --key-name pradeep --subnet-id ${PUBLIC_SUBNET_IDS[0]} --query 'Instances[0].InstanceId' --output text)
+echo "EC2 Instance ID '$PUBLIC_INSTANCE_ID' launched in public subnet."
 
-# Step 1: Launch EC2 Instance in Public Subnet
-INSTANCE_ID_PUBLIC=$(aws ec2 run-instances --image-id $IMAGE_ID --instance-type $INSTANCE_TYPE --subnet-id $SUBNET_ID_PUBLIC --associate-public-ip-address --key-name $KEY_NAME --region $REGION --query 'Instances[0].InstanceId' --output text)
-echo "EC2 instance launched in public subnet with Instance ID: $INSTANCE_ID_PUBLIC"
+# 12. Launch an EC2 Instance in Private Subnet
+echo "Launching EC2 instance in private subnet..."
+PRIVATE_INSTANCE_ID=$(aws ec2 run-instances --image-id ami-05134c8ef96964280 --instance-type t2.micro --key-name pradeep --subnet-id ${PRIVATE_SUBNET_IDS[0]} --query 'Instances[0].InstanceId' --output text)
+echo "EC2 Instance ID '$PRIVATE_INSTANCE_ID' launched in private subnet."
 
-# Step 2: Launch EC2 Instance in Private Subnet
-INSTANCE_ID_PRIVATE=$(aws ec2 run-instances --image-id $IMAGE_ID --instance-type $INSTANCE_TYPE --subnet-id $SUBNET_ID_PRIVATE --key-name $KEY_NAME --region $REGION --query 'Instances[0].InstanceId' --output text)
-echo "EC2 instance launched in private subnet with Instance ID: $INSTANCE_ID_PRIVATE"
+# 13. Connect to EC2 Instance in Public Subnet
+echo "You can connect to your EC2 instance in the public subnet using SSH."
 
-# Step 3: Connect to EC2 Instance in Public Subnet
-echo "Connecting to public EC2 instance..."
-ssh -i "$KEY_NAME.pem" ec2-user@$INSTANCE_ID_PUBLIC
+# 14. Connect to EC2 Instance in Private Subnet
+echo "To connect to your EC2 instance in the private subnet, use the public instance as a jump server."
 
-# Step 4: Connect to EC2 Instance in Private Subnet via Public Instance
-echo "Connecting to private EC2 instance via public instance..."
-ssh -i "$KEY_NAME.pem" ec2-user@$INSTANCE_ID_PUBLIC -t "ssh ec2-user@$INSTANCE_ID_PRIVATE"
+# 15. Stop Both EC2 Instances
+echo "Stopping both EC2 instances..."
+aws ec2 stop-instances --instance-ids $PUBLIC_INSTANCE_ID $PRIVATE_INSTANCE_ID
 
-# Step 5: Stop EC2 Instances
-aws ec2 stop-instances --instance-ids $INSTANCE_ID_PUBLIC $INSTANCE_ID_PRIVATE --region $REGION
-echo "Stopped EC2 instances: $INSTANCE_ID_PUBLIC, $INSTANCE_ID_PRIVATE"
+# 16. Create an EC2 Instance with 8 GB Storage
+echo "Launching a new EC2 instance with 8 GB storage..."
+INSTANCE_ID=$(aws ec2 run-instances --image-id ami-05134c8ef96964280 --instance-type t2.micro --key-name pradeep --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"VolumeSize\":8}}]" --query 'Instances[0].InstanceId' --output text)
+echo "New EC2 Instance ID '$INSTANCE_ID' launched with 8 GB storage."
 
-# Step 6: Create an EC2 instance with 8 GB storage
-INSTANCE_ID_STORAGE=$(aws ec2 run-instances --image-id $IMAGE_ID --instance-type $INSTANCE_TYPE --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=8}" --key-name $KEY_NAME --region $REGION --query 'Instances[0].InstanceId' --output text)
-echo "EC2 instance created with 8 GB storage, Instance ID: $INSTANCE_ID_STORAGE"
+# 17. Create a Snapshot for the EC2 Instance's EBS Volume
+echo "Creating a snapshot of the EC2 instance's EBS volume..."
+VOLUME_ID=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text)
+SNAPSHOT_ID=$(aws ec2 create-snapshot --volume-id $VOLUME_ID --description "Snapshot of volume $VOLUME_ID" --query 'SnapshotId' --output text)
+echo "Snapshot ID '$SNAPSHOT_ID' created."
 
-# Step 7: Create a Snapshot for the EC2 Instance's EBS Volume
-VOLUME_ID=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID_STORAGE --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text --region $REGION)
-SNAPSHOT_ID=$(aws ec2 create-snapshot --volume-id $VOLUME_ID --description "Snapshot of EBS volume" --query 'SnapshotId' --output text --region $REGION)
-echo "Snapshot created with ID: $SNAPSHOT_ID"
+# 18. Extend Storage by an Additional 8 GB for the Running Instance
+echo "Extending storage of the running instance by an additional 8 GB..."
+aws ec2 modify-volume --volume-id $VOLUME_ID --size 16
+echo "Volume ID '$VOLUME_ID' extended to 16 GB."
 
-# Step 8: Extend storage by an additional 8 GB
-aws ec2 modify-volume --volume-id $VOLUME_ID --size 16 --region $REGION
-echo "Extended EBS volume size by 8 GB"
+# 19. Delete the Snapshot Created Earlier
+echo "Deleting the snapshot..."
+aws ec2 delete-snapshot --snapshot-id $SNAPSHOT_ID
+echo "Snapshot ID '$SNAPSHOT_ID' deleted."
 
-# Step 9: Delete the snapshot created earlier
-aws ec2 delete-snapshot --snapshot-id $SNAPSHOT_ID --region $REGION
-echo "Deleted the snapshot with ID: $SNAPSHOT_ID"
+# 20. Instructions on How to Connect to an EC2 Instance if the PEM Key is Lost
+echo "To connect to an EC2 instance if the PEM key is lost, you can either:"
+echo "- Use EC2 Instance Connect (browser-based SSH)."
+echo "- Create an AMI from the instance, launch a new instance, and set a new key pair."
+echo "- Attach the root volume to another instance to modify the authorized_keys file."
 
-# Step 10: Instructions on how to connect to an EC2 instance if the PEM key is lost
-echo "To connect to an EC2 instance if the PEM key is lost:"
-echo "1. Stop the instance."
-echo "2. Detach the root EBS volume and attach it to another instance."
-echo "3. Modify the SSH configuration by injecting a new SSH key."
-echo "4. Reattach the volume to the original instance and start it."
+# 21. Create Instance-1 in ap-south-1a with an 8 GB Volume
+echo "Launching EC2 instance-1 in ap-south-1a with 8 GB volume..."
+INSTANCE_1_ID=$(aws ec2 run-instances --image-id ami-05134c8ef96964280 --instance-type t2.micro --key-name pradeep --subnet-id ${PUBLIC_SUBNET_IDS[0]} --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"VolumeSize\":8}}]" --query 'Instances[0].InstanceId' --output text)
+echo "Instance-1 ID '$INSTANCE_1_ID' launched in ap-south-1a."
 
-# Step 11: Create Instance-1 in ap-south-1a with an 8 GB volume
-INSTANCE_ID_INSTANCE1=$(aws ec2 run-instances --image-id $IMAGE_ID --instance-type $INSTANCE_TYPE --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=8}" --key-name $KEY_NAME --subnet-id subnet-1a --region ap-south-1 --query 'Instances[0].InstanceId' --output text)
-echo "Instance-1 created in ap-south-1a with ID: $INSTANCE_ID_INSTANCE1"
+# 22. Create Instance-2 in ap-south-1b with an 8 GB Volume
+echo "Launching EC2 instance-2 in ap-south-1b with 8 GB volume..."
+INSTANCE_2_ID=$(aws ec2 run-instances --image-id ami-05134c8ef96964280 --instance-type t2.micro --key-name pradeep --subnet-id ${PUBLIC_SUBNET_IDS[1]} --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"VolumeSize\":8}}]" --query 'Instances[0].InstanceId' --output text)
+echo "Instance-2 ID '$INSTANCE_2_ID' launched in ap-south-1b."
 
-# Step 12: Create Instance-2 in ap-south-1b with an 8 GB volume
-INSTANCE_ID_INSTANCE2=$(aws ec2 run-instances --image-id $IMAGE_ID --instance-type $INSTANCE_TYPE --block-device-mappings "DeviceName=/dev/xvda,Ebs={VolumeSize=8}" --key-name $KEY_NAME --subnet-id subnet-1b --region ap-south-1 --query 'Instances[0].InstanceId' --output text)
-echo "Instance-2 created in ap-south-1b with ID: $INSTANCE_ID_INSTANCE2"
+# 23. Stop and Detach the EBS Volume from Instance-1 and Attempt to Attach it to Instance-2
+echo "Stopping instance-1 and detaching its EBS volume..."
+aws ec2 stop-instances --instance-ids $INSTANCE_1_ID
+aws ec2 wait instance-stopped --instance-ids $INSTANCE_1_ID
 
-# Step 13: Stop and detach the EBS volume from Instance-1 and attach it to Instance-2
-aws ec2 stop-instances --instance-ids $INSTANCE_ID_INSTANCE1 --region ap-south-1
-aws ec2 detach-volume --volume-id $VOLUME_ID --region ap-south-1
-aws ec2 attach-volume --volume-id $VOLUME_ID --instance-id $INSTANCE_ID_INSTANCE2 --device /dev/sdf --region ap-south-1
-echo "Detached EBS volume from Instance-1 and attached it to Instance-2"
+VOLUME_ID_1=$(aws ec2 describe-instances --instance-ids $INSTANCE_1_ID --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text)
+aws ec2 detach-volume --volume-id $VOLUME_ID_1
+aws ec2 wait volume-available --volume-ids $VOLUME_ID_1
 
-# Step 14: Retrieve the list of private IP addresses of running instances
-aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].[InstanceId, PrivateIpAddress]" --output table --region $REGION > instance_ips.txt
-echo "Retrieved private IP addresses of running instances and saved to instance_ips.txt"
+echo "Attempting to attach EBS volume from instance-1 to instance-2..."
+aws ec2 attach-volume --volume-id $VOLUME_ID_1 --instance-id $INSTANCE_2_ID --device /dev/sdf
 
-# Step 15: Create a script to install Java packages based on OS
-echo '#!/bin/bash' > install_java.sh
-echo 'for ip in $(awk "{print \$2}" instance_ips.txt); do' >> install_java.sh
-echo '  OS=$(ssh -o StrictHostKeyChecking=no -i "$KEY_NAME.pem" ec2-user@$ip "uname -a")' >> install_java.sh
-echo '  if [[ $OS == *"Ubuntu"* ]]; then' >> install_java.sh
-echo '    ssh -o StrictHostKeyChecking=no -i "$KEY_NAME.pem" ec2-user@$ip "sudo apt update && sudo apt install default-jdk -y"' >> install_java.sh
-echo '  elif [[ $OS == *"Red Hat"* ]]; then' >> install_java.sh
-echo '    ssh -o StrictHostKeyChecking=no -i "$KEY_NAME.pem" ec2-user@$ip "sudo yum update && sudo yum install java-1.8.0-openjdk-devel -y"' >> install_java.sh
-echo '  elif [[ $OS == *"CentOS"* ]]; then' >> install_java.sh
-echo '    ssh -o StrictHostKeyChecking=no -i "$KEY_NAME.pem" ec2-user@$ip "sudo yum update && sudo yum install java-1.8.0-openjdk-devel -y"' >> install_java.sh
-echo '  fi' >> install_java.sh
-echo 'done' >> install_java.sh
-chmod +x install_java.sh
-echo "Script to install Java packages created based on OS"
+echo "Note: Attaching an EBS volume from one instance to another is possible if both instances are in the same availability zone and the volume is of a supported type (e.g., gp2, io1, st1, etc.). If the volume is not attachable, you may need to create a snapshot and then create a new volume from the snapshot in the desired AZ."
+
+echo "Script execution completed."
 
